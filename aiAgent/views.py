@@ -1,12 +1,12 @@
+import json
+import requests
 from django.shortcuts import render
 from django.http import HttpResponse, JsonResponse
-import openai
 from django.conf import settings
 from django.views.decorators.csrf import ensure_csrf_cookie
+from google import genai
 
-openai.api_key = settings.OPENAI_API_KEY
-
-
+GEMINI_API_KEY = settings.GEMINI_API_KEY 
 
 @ensure_csrf_cookie
 def get_csrf(request):
@@ -16,26 +16,28 @@ def index(request):
     return HttpResponse("Hello, world. You're at the aiAgent index.")
 
 def chat(request):
-    if (request.method == 'POST'):
-        user_message = request.POST.get('user_message')
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            user_message = data.get('user_message')
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON"}, status=400)
+
         if not user_message:
-            return HttpResponse("Please enter a message.")
+            return JsonResponse({"error": "Please enter a message."}, status=400)
+
+        client = genai.Client(api_key=settings.GEMINI_API_KEY)
         
         try:
-            response = openai.chatCompletion.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": "You are a helpful assistant."},
-                    {"role": "user", "content": user_message}
-                ],
-                max_tokens=1000,
+            response = client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=user_message
             )
-            reply = response.choices[0].message.content
+            reply = response.text
             return JsonResponse({"reply": reply})
-        except Exception as e:
+        except Exception  as e:
             return JsonResponse({"error": str(e)}, status=500)
     else:
-        return HttpResponse("invalid request.")
-
+        return JsonResponse({"error": "Invalid request method."}, status=405)
 
 
