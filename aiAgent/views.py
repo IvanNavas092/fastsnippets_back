@@ -4,18 +4,25 @@ from django.shortcuts import render
 from django.http import HttpResponse, JsonResponse
 from django.conf import settings
 from django.views.decorators.csrf import ensure_csrf_cookie
+from django.middleware.csrf import get_token
 from google import genai
 
 GEMINI_API_KEY = settings.GEMINI_API_KEY 
 
 @ensure_csrf_cookie
 def get_csrf(request):
-    return JsonResponse({"detail": "CSRF cookie set"})
-
+    """Endpoint para obtener el token CSRF"""
+    return JsonResponse({
+        "detail": "CSRF cookie set", 
+        "csrfToken": get_token(request)  # Devuelve el token en la respuesta
+    })
 def index(request):
     return HttpResponse("Hello, world. You're at the aiAgent index.")
 
 def chat(request):
+    print("COOKIES:", request.COOKIES)
+    print("HEADERS:", request.headers)
+
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
@@ -31,7 +38,15 @@ def chat(request):
         try:
             response = client.models.generate_content(
                 model="gemini-2.5-flash",
-                contents=user_message
+                    contents=(
+        "Eres un asistente experto en programación especializado en crear snippets "
+        "en frameworks (Angular, React, Vue, Svelte). "
+        "Responde únicamente preguntas sobre frameworks. "
+        "Si te preguntan otra cosa, responde: "
+        "'Lo siento, solo puedo responder preguntas sobre frameworks de programación.'\n\n"
+        f"Usuario: {user_message}"
+    ),
+                
             )
             reply = response.text
             return JsonResponse({"reply": reply})
