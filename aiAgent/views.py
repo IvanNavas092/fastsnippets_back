@@ -20,9 +20,6 @@ def index(request):
     return HttpResponse("Hello, world. You're at the aiAgent index.")
 
 def chat(request):
-    print("COOKIES:", request.COOKIES)
-    print("HEADERS:", request.headers)
-
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
